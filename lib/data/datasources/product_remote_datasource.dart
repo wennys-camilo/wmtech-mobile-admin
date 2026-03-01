@@ -1,5 +1,7 @@
 import '../../core/api_client.dart';
+import '../../domain/entities/category.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/entities/section.dart';
 
 /// Fonte de dados remota: produtos no backend.
 class ProductRemoteDatasource {
@@ -7,6 +9,34 @@ class ProductRemoteDatasource {
       : _api = apiClient ?? ApiClient();
 
   final ApiClient _api;
+
+  static List<Category>? _parseCategories(dynamic list) {
+    if (list == null || list is! List) return null;
+    return list
+        .map((e) {
+          try {
+            return Category.fromJson(e);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<Category>()
+        .toList();
+  }
+
+  static List<Section>? _parseSections(dynamic list) {
+    if (list == null || list is! List) return null;
+    return list
+        .map((e) {
+          try {
+            return Section.fromJson(e);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<Section>()
+        .toList();
+  }
 
   static Product _productFromJson(dynamic json) {
     if (json == null || json is! Map) {
@@ -20,6 +50,8 @@ class ProductRemoteDatasource {
           .where((s) => s.isNotEmpty)
           .toList();
     }
+    final categories = _parseCategories(map['categories']);
+    final sections = _parseSections(map['sections']);
     return Product(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
@@ -29,6 +61,8 @@ class ProductRemoteDatasource {
       sku: map['sku'] as String?,
       active: map['active'] as bool? ?? true,
       images: images,
+      categories: categories,
+      sections: sections,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -62,6 +96,8 @@ class ProductRemoteDatasource {
     String? sku,
     bool active = true,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -72,6 +108,8 @@ class ProductRemoteDatasource {
     if (description != null && description.isNotEmpty) body['description'] = description;
     if (sku != null && sku.isNotEmpty) body['sku'] = sku;
     if (images != null && images.isNotEmpty) body['images'] = images;
+    if (categoryIds != null && categoryIds.isNotEmpty) body['categoryIds'] = categoryIds;
+    if (sectionIds != null && sectionIds.isNotEmpty) body['sectionIds'] = sectionIds;
 
     return _api.post<Product>(
       '/products',
@@ -90,6 +128,8 @@ class ProductRemoteDatasource {
     String? sku,
     bool? active,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -99,6 +139,8 @@ class ProductRemoteDatasource {
     if (sku != null) body['sku'] = sku;
     if (active != null) body['active'] = active;
     if (images != null) body['images'] = images;
+    if (categoryIds != null) body['categoryIds'] = categoryIds;
+    if (sectionIds != null) body['sectionIds'] = sectionIds;
 
     return _api.patch<Product>(
       '/products/$id',

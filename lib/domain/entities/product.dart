@@ -1,3 +1,6 @@
+import 'category.dart';
+import 'section.dart';
+
 /// Entidade de domínio: produto (espelho do backend).
 class Product {
   const Product({
@@ -9,6 +12,8 @@ class Product {
     this.sku,
     this.active = true,
     this.images,
+    this.categories,
+    this.sections,
     this.createdAt,
   });
 
@@ -20,6 +25,8 @@ class Product {
   final String? sku;
   final bool active;
   final List<String>? images;
+  final List<Category>? categories;
+  final List<Section>? sections;
   final DateTime? createdAt;
 
   Product copyWith({
@@ -31,6 +38,8 @@ class Product {
     String? sku,
     bool? active,
     List<String>? images,
+    List<Category>? categories,
+    List<Section>? sections,
     DateTime? createdAt,
   }) {
     return Product(
@@ -42,6 +51,8 @@ class Product {
       sku: sku ?? this.sku,
       active: active ?? this.active,
       images: images ?? this.images,
+      categories: categories ?? this.categories,
+      sections: sections ?? this.sections,
       createdAt: createdAt ?? this.createdAt,
     );
   }

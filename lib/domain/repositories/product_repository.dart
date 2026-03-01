@@ -15,6 +15,8 @@ abstract class ProductRepository {
     String? sku,
     bool active = true,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   });
 
   /// Atualiza um produto. Requer autenticação.
@@ -27,5 +29,7 @@ abstract class ProductRepository {
     String? sku,
     bool? active,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   });
 }

@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/supabase_storage_service.dart';
+import '../../data/datasources/category_remote_datasource.dart';
+import '../../data/datasources/section_remote_datasource.dart';
+import '../../domain/entities/category.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/entities/section.dart';
 import '../../domain/repositories/product_repository.dart';
 
 /// Formulário de criação/edição de produto. Inclui seleção de imagens (galeria/câmera) e upload para Supabase Storage.
@@ -33,18 +37,42 @@ class _ProductFormPageState extends State<ProductFormPage> {
   String? _error;
   final List<XFile> _selectedFiles = [];
   late List<String> _existingImageUrls;
+  final _categoriesDatasource = CategoryRemoteDatasource();
+  List<Category> _allCategories = [];
+  late Set<String> _selectedCategoryIds;
+  final _sectionsDatasource = SectionRemoteDatasource();
+  List<Section> _allSections = [];
+  late Set<String> _selectedSectionIds;
 
   @override
   void initState() {
     super.initState();
     final p = widget.product;
     _existingImageUrls = List.from(p?.images ?? []);
+    _selectedCategoryIds = Set.from(p?.categories?.map((c) => c.id) ?? []);
+    _selectedSectionIds = Set.from(p?.sections?.map((s) => s.id) ?? []);
     _nameController = TextEditingController(text: p?.name ?? '');
     _descriptionController = TextEditingController(text: p?.description ?? '');
     _priceController = TextEditingController(text: p != null ? p.price.toStringAsFixed(2) : '');
     _stockController = TextEditingController(text: p?.stock.toString() ?? '0');
     _skuController = TextEditingController(text: p?.sku ?? '');
     _active = p?.active ?? true;
+    _loadCategories();
+    _loadSections();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final list = await _categoriesDatasource.getCategories();
+      if (mounted) setState(() => _allCategories = list);
+    } catch (_) {}
+  }
+
+  Future<void> _loadSections() async {
+    try {
+      final list = await _sectionsDatasource.getSections();
+      if (mounted) setState(() => _allSections = list);
+    } catch (_) {}
   }
 
   @override
@@ -127,6 +155,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
           stock: stock,
           sku: sku,
           active: _active,
+          categoryIds: _selectedCategoryIds.toList(),
+          sectionIds: _selectedSectionIds.toList(),
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -145,6 +175,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
           stock: stock,
           sku: sku,
           active: _active,
+          categoryIds: _selectedCategoryIds.isEmpty ? null : _selectedCategoryIds.toList(),
+          sectionIds: _selectedSectionIds.isEmpty ? null : _selectedSectionIds.toList(),
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -246,6 +278,56 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 title: const Text('Ativo'),
                 value: _active,
                 onChanged: (v) => setState(() => _active = v),
+              ),
+              const SizedBox(height: 24),
+              const Text('Categorias', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _allCategories.map((cat) {
+                  final selected = _selectedCategoryIds.contains(cat.id);
+                  return FilterChip(
+                    label: Text(cat.name),
+                    selected: selected,
+                    onSelected: _loading
+                        ? null
+                        : (v) {
+                            setState(() {
+                              if (v) {
+                                _selectedCategoryIds.add(cat.id);
+                              } else {
+                                _selectedCategoryIds.remove(cat.id);
+                              }
+                            });
+                          },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              const Text('Seções', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _allSections.map((sec) {
+                  final selected = _selectedSectionIds.contains(sec.id);
+                  return FilterChip(
+                    label: Text(sec.name),
+                    selected: selected,
+                    onSelected: _loading
+                        ? null
+                        : (v) {
+                            setState(() {
+                              if (v) {
+                                _selectedSectionIds.add(sec.id);
+                              } else {
+                                _selectedSectionIds.remove(sec.id);
+                              }
+                            });
+                          },
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 24),
               const Text('Imagens', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),

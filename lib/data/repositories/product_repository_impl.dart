@@ -23,6 +23,8 @@ class ProductRepositoryImpl implements ProductRepository {
     String? sku,
     bool active = true,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   }) {
     return _datasource.createProduct(
       name: name,
@@ -32,6 +34,8 @@ class ProductRepositoryImpl implements ProductRepository {
       sku: sku,
       active: active,
       images: images,
+      categoryIds: categoryIds,
+      sectionIds: sectionIds,
     );
   }
 
@@ -45,6 +49,8 @@ class ProductRepositoryImpl implements ProductRepository {
     String? sku,
     bool? active,
     List<String>? images,
+    List<String>? categoryIds,
+    List<String>? sectionIds,
   }) {
     return _datasource.updateProduct(
       id,
@@ -55,6 +61,8 @@ class ProductRepositoryImpl implements ProductRepository {
       sku: sku,
       active: active,
       images: images,
+      categoryIds: categoryIds,
+      sectionIds: sectionIds,
     );
   }
 }
