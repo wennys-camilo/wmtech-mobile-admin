@@ -15,6 +15,11 @@ class Product {
     this.categories,
     this.sections,
     this.createdAt,
+    this.weightKg,
+    this.widthCm,
+    this.heightCm,
+    this.lengthCm,
+    this.compareAtPrice,
   });
 
   final String id;
@@ -28,6 +33,12 @@ class Product {
   final List<Category>? categories;
   final List<Section>? sections;
   final DateTime? createdAt;
+  final double? weightKg;
+  final int? widthCm;
+  final int? heightCm;
+  final int? lengthCm;
+  /// Preço de referência ("de"); quando > price exibe desconto.
+  final double? compareAtPrice;
 
   Product copyWith({
     String? id,
@@ -41,6 +52,11 @@ class Product {
     List<Category>? categories,
     List<Section>? sections,
     DateTime? createdAt,
+    double? weightKg,
+    int? widthCm,
+    int? heightCm,
+    int? lengthCm,
+    double? compareAtPrice,
   }) {
     return Product(
       id: id ?? this.id,
@@ -54,6 +70,11 @@ class Product {
       categories: categories ?? this.categories,
       sections: sections ?? this.sections,
       createdAt: createdAt ?? this.createdAt,
+      weightKg: weightKg ?? this.weightKg,
+      widthCm: widthCm ?? this.widthCm,
+      heightCm: heightCm ?? this.heightCm,
+      lengthCm: lengthCm ?? this.lengthCm,
+      compareAtPrice: compareAtPrice ?? this.compareAtPrice,
     );
   }
 }

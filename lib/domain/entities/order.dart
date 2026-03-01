@@ -110,12 +110,14 @@ class OrderClientEntity {
     required this.fullName,
     required this.email,
     this.phoneNumber,
+    this.cpf,
   });
 
   final String id;
   final String fullName;
   final String email;
   final String? phoneNumber;
+  final String? cpf;
 
   static OrderClientEntity? fromJson(dynamic json) {
     if (json == null || json is! Map) return null;
@@ -129,6 +131,7 @@ class OrderClientEntity {
       fullName: fullName,
       email: email,
       phoneNumber: map['phoneNumber'] as String?,
+      cpf: map['cpf'] as String?,
     );
   }
 }
@@ -199,6 +202,7 @@ class OrderPaymentEntity {
     required this.status,
     required this.amount,
     this.createdAt,
+    this.billingId,
   });
 
   final String id;
@@ -206,6 +210,8 @@ class OrderPaymentEntity {
   final PaymentStatus status;
   final double amount;
   final String? createdAt;
+  /// ID da cobrança no AbacatePay (ex.: bill_xxx).
+  final String? billingId;
 
   static double _toDouble(dynamic v) {
     if (v == null) return 0;
@@ -226,12 +232,20 @@ class OrderPaymentEntity {
         : (createdAt != null && createdAt.toString().isNotEmpty)
             ? createdAt.toString()
             : null;
+    final details = map['details'];
+    String? billingId;
+    if (details is Map) {
+      final d = Map<String, dynamic>.from(details);
+      billingId = d['abacatepayBillingId'] as String? ?? d['billingId'] as String?;
+      if (billingId != null && billingId.isEmpty) billingId = null;
+    }
     return OrderPaymentEntity(
       id: id,
       type: type,
       status: status,
       amount: _toDouble(map['amount']),
       createdAt: createdAtStr,
+      billingId: billingId,
     );
   }
 }
@@ -252,6 +266,11 @@ class Order {
     this.trackingUrl,
     this.shippedAt,
     this.shippingStatus,
+    this.shippingPrice,
+    this.shippingCarrier,
+    this.shippingDays,
+    this.cancellationRequestedAt,
+    this.cancellationReason,
   });
 
   final String id;
@@ -268,11 +287,22 @@ class Order {
   final String? trackingUrl;
   final String? shippedAt;
   final String? shippingStatus;
+  final double? shippingPrice;
+  final String? shippingCarrier;
+  final int? shippingDays;
+  final String? cancellationRequestedAt;
+  final String? cancellationReason;
 
   static double _toDouble(dynamic v) {
     if (v == null) return 0;
     if (v is num) return v.toDouble();
     return double.tryParse(v.toString()) ?? 0;
+  }
+
+  static double? _toDoubleOrNull(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 
   static Order fromJson(dynamic json) {
@@ -301,6 +331,10 @@ class Order {
         : (createdAt != null && createdAt.toString().isNotEmpty)
             ? createdAt.toString()
             : '';
+    final shippingDaysRaw = map['shippingDays'] ?? map['shipping_days'];
+    final shippingDays = shippingDaysRaw is num
+        ? shippingDaysRaw.toInt()
+        : (shippingDaysRaw != null ? int.tryParse(shippingDaysRaw.toString()) : null);
     return Order(
       id: map['id'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
@@ -316,6 +350,11 @@ class Order {
       trackingUrl: map['trackingUrl'] as String? ?? map['tracking_url'] as String?,
       shippedAt: _dateStr(map['shippedAt'] ?? map['shipped_at']),
       shippingStatus: map['shippingStatus'] as String? ?? map['shipping_status'] as String?,
+      shippingPrice: _toDoubleOrNull(map['shippingPrice'] ?? map['shipping_price']),
+      shippingCarrier: map['shippingCarrier'] as String? ?? map['shipping_carrier'] as String?,
+      shippingDays: shippingDays,
+      cancellationRequestedAt: _dateStr(map['cancellationRequestedAt'] ?? map['cancellation_requested_at']),
+      cancellationReason: map['cancellationReason'] as String? ?? map['cancellation_reason'] as String?,
     );
   }
 

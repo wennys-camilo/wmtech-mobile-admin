@@ -17,6 +17,11 @@ abstract class ProductRepository {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    required double weightKg,
+    required int widthCm,
+    required int heightCm,
+    required int lengthCm,
+    double? compareAtPrice,
   });
 
   /// Atualiza um produto. Requer autenticação.
@@ -31,5 +36,11 @@ abstract class ProductRepository {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    double? weightKg,
+    int? widthCm,
+    int? heightCm,
+    int? lengthCm,
+    double? compareAtPrice,
+    bool setCompareAtPrice = false,
   });
 }

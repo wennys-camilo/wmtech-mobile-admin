@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../login/login_page.dart';
+import '../dashboard/dashboard_page.dart';
 import '../products/products_list_page.dart';
 import '../orders/orders_list_page.dart';
 import '../categories/categories_list_page.dart';
@@ -7,7 +8,7 @@ import '../sections/sections_list_page.dart';
 import '../consignments/consignments_list_page.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 
-/// Tela principal do admin: drawer com Produtos, Pedidos, Categorias, Seções.
+/// Tela principal do admin: drawer com Dashboard, Pedidos, Produtos, etc.
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
 
@@ -20,8 +21,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   static final _pages = [
-    _Page(title: 'Produtos', icon: Icons.inventory_2, child: ProductsListPage()),
+    _Page(title: 'Dashboard', icon: Icons.dashboard, child: DashboardPage()),
     _Page(title: 'Pedidos', icon: Icons.shopping_bag, child: OrdersListPage()),
+    _Page(title: 'Produtos', icon: Icons.inventory_2, child: ProductsListPage()),
     _Page(title: 'Consignados', icon: Icons.storefront, child: ConsignmentsListPage()),
     _Page(title: 'Categorias', icon: Icons.category, child: CategoriesListPage()),
     _Page(title: 'Seções', icon: Icons.view_list, child: SectionsListPage()),

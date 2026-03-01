@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../data/datasources/order_remote_datasource.dart';
 import '../../domain/entities/order.dart';
 
@@ -43,7 +44,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final o = _order;
     if (o == null) return;
     _trackingCodeController.text = o.trackingCode ?? '';
-    _carrierController.text = o.carrier ?? '';
+    _carrierController.text = o.carrier ?? o.shippingCarrier ?? '';
     _trackingUrlController.text = o.trackingUrl ?? '';
     _shippedAtDate = _parseShippedAt(o.shippedAt);
     _shippingStatusValue = ShippingStatus.fromString(o.shippingStatus);
@@ -65,6 +66,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   String _formatTime(DateTime d) {
     return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatCancellationRequestedAt(String isoStr) {
+    final dt = DateTime.tryParse(isoStr.trim());
+    if (dt == null) return 'Solicitado em: $isoStr';
+    return 'Solicitado em: ${_formatDate(dt)} às ${_formatTime(dt)}';
   }
 
   Future<void> _pickShippedAtDate() async {
@@ -262,6 +269,104 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          if (_order!.cancellationRequestedAt != null &&
+                              _order!.cancellationRequestedAt!.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade100,
+                                border: Border.all(color: Colors.amber.shade700, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.amber.shade800,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'CANCELAMENTO SOLICITADO',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.amber.shade900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'O cliente solicitou o cancelamento deste pedido. '
+                                          'Analise e processe o estorno manualmente no AbacatePay.',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.amber.shade900,
+                                          ),
+                                        ),
+                                        if (_order!.cancellationRequestedAt != null &&
+                                            _order!.cancellationRequestedAt!.isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            _formatCancellationRequestedAt(_order!.cancellationRequestedAt!),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.amber.shade800,
+                                            ),
+                                          ),
+                                        ],
+                                        if (_order!.cancellationReason != null &&
+                                            _order!.cancellationReason!.isNotEmpty) ...[
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Motivo: ${_order!.cancellationReason}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontStyle: FontStyle.italic,
+                                              color: Colors.amber.shade800,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          if ((_order!.shippingCarrier != null &&
+                                  _order!.shippingCarrier!.isNotEmpty) ||
+                              (_order!.shippingPrice != null &&
+                                  _order!.shippingPrice! > 0)) ...[
+                            Card(
+                              child: ListTile(
+                                leading: const Icon(Icons.local_shipping),
+                                title: Text(
+                                  _order!.shippingCarrier ?? 'Frete',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: _order!.shippingDays != null
+                                    ? Text('Até ${_order!.shippingDays} dias úteis')
+                                    : null,
+                                trailing: _order!.shippingPrice != null && _order!.shippingPrice! > 0
+                                    ? Text(
+                                        'R\$ ${_order!.shippingPrice!.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -498,25 +603,80 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     const SizedBox(height: 8),
                                     ..._order!.payments!.map(
                                       (p) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: Row(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${p.type.label} — ${p.status.label}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w500,
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '${p.type.label} — ${p.status.label}',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'R\$ ${p.amount.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (p.billingId != null &&
+                                                p.billingId!.isNotEmpty) ...[
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'ID da cobrança:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
                                                 ),
                                               ),
-                                            ),
-                                            Text(
-                                              'R\$ ${p.amount.toStringAsFixed(2)}',
-                                              style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SelectableText(
+                                                      p.billingId!,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontFamily: 'monospace',
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.copy, size: 20),
+                                                    tooltip: 'Copiar ID da cobrança',
+                                                    onPressed: () {
+                                                      Clipboard.setData(
+                                                        ClipboardData(text: p.billingId!),
+                                                      );
+                                                      ScaffoldMessenger.of(context)
+                                                          .showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text(
+                                                                'ID da cobrança copiado',
+                                                              ),
+                                                              duration: Duration(
+                                                                seconds: 2,
+                                                              ),
+                                                            ),
+                                                          );
+                                                    },
+                                                  ),
+                                                ],
                                               ),
-                                            ),
+                                            ],
                                           ],
                                         ),
                                       ),

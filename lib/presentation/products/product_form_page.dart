@@ -30,8 +30,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
+  late final TextEditingController _compareAtPriceController;
   late final TextEditingController _stockController;
   late final TextEditingController _skuController;
+  late final TextEditingController _weightController;
+  late final TextEditingController _widthController;
+  late final TextEditingController _heightController;
+  late final TextEditingController _lengthController;
   bool _active = true;
   bool _loading = false;
   String? _error;
@@ -54,8 +59,23 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _nameController = TextEditingController(text: p?.name ?? '');
     _descriptionController = TextEditingController(text: p?.description ?? '');
     _priceController = TextEditingController(text: p != null ? p.price.toStringAsFixed(2) : '');
+    _compareAtPriceController = TextEditingController(
+      text: p?.compareAtPrice != null ? p!.compareAtPrice!.toStringAsFixed(2) : '',
+    );
     _stockController = TextEditingController(text: p?.stock.toString() ?? '0');
     _skuController = TextEditingController(text: p?.sku ?? '');
+    _weightController = TextEditingController(
+      text: p?.weightKg != null ? p!.weightKg!.toStringAsFixed(3) : '0.300',
+    );
+    _widthController = TextEditingController(
+      text: p?.widthCm?.toString() ?? '16',
+    );
+    _heightController = TextEditingController(
+      text: p?.heightCm?.toString() ?? '16',
+    );
+    _lengthController = TextEditingController(
+      text: p?.lengthCm?.toString() ?? '16',
+    );
     _active = p?.active ?? true;
     _loadCategories();
     _loadSections();
@@ -80,8 +100,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _compareAtPriceController.dispose();
     _stockController.dispose();
     _skuController.dispose();
+    _weightController.dispose();
+    _widthController.dispose();
+    _heightController.dispose();
+    _lengthController.dispose();
     super.dispose();
   }
 
@@ -141,8 +166,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
       final name = _nameController.text.trim();
       final description = _descriptionController.text.trim();
       final price = double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0;
+      final compareAtPriceRaw = _compareAtPriceController.text.trim();
+      final compareAtPrice = compareAtPriceRaw.isEmpty
+          ? null
+          : double.tryParse(compareAtPriceRaw.replaceAll(',', '.'));
       final stock = int.tryParse(_stockController.text) ?? 0;
       final sku = _skuController.text.trim().isEmpty ? null : _skuController.text.trim();
+      final weightKg = double.tryParse(_weightController.text.replaceAll(',', '.')) ?? 0.3;
+      final widthCm = int.tryParse(_widthController.text) ?? 16;
+      final heightCm = int.tryParse(_heightController.text) ?? 16;
+      final lengthCm = int.tryParse(_lengthController.text) ?? 16;
 
       List<String> imageUrls = List.from(_existingImageUrls);
 
@@ -157,6 +190,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
           active: _active,
           categoryIds: _selectedCategoryIds.toList(),
           sectionIds: _selectedSectionIds.toList(),
+          weightKg: weightKg,
+          widthCm: widthCm,
+          heightCm: heightCm,
+          lengthCm: lengthCm,
+          compareAtPrice: compareAtPrice,
+          setCompareAtPrice: true,
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -177,6 +216,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
           active: _active,
           categoryIds: _selectedCategoryIds.isEmpty ? null : _selectedCategoryIds.toList(),
           sectionIds: _selectedSectionIds.isEmpty ? null : _selectedSectionIds.toList(),
+          weightKg: weightKg,
+          widthCm: widthCm,
+          heightCm: heightCm,
+          lengthCm: lengthCm,
+          compareAtPrice: (compareAtPrice != null && compareAtPrice > 0) ? compareAtPrice : null,
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -254,6 +298,24 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _compareAtPriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Preço de referência (opcional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ex.: preço "de" para exibir desconto',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final ref = double.tryParse(v.replaceAll(',', '.'));
+                  if (ref == null || ref <= 0) return 'Valor inválido';
+                  final price = double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0;
+                  if (ref < price) return 'Deve ser maior ou igual ao preço de venda';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _stockController,
                 decoration: const InputDecoration(
                   labelText: 'Estoque *',
@@ -272,6 +334,85 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 controller: _skuController,
                 decoration: const InputDecoration(labelText: 'SKU', border: OutlineInputBorder()),
                 textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Peso e dimensões (obrigatório para frete)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _weightController,
+                decoration: const InputDecoration(
+                  labelText: 'Peso (kg) *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ex.: 0.3',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Obrigatório';
+                  final n = double.tryParse(v.replaceAll(',', '.'));
+                  if (n == null || n < 0.001) return 'Mínimo 0,001 kg';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _widthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Largura (cm) *',
+                        border: OutlineInputBorder(),
+                        hintText: '16',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Obrigatório';
+                        final n = int.tryParse(v);
+                        if (n == null || n < 1) return 'Mín. 1';
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _heightController,
+                      decoration: const InputDecoration(
+                        labelText: 'Altura (cm) *',
+                        border: OutlineInputBorder(),
+                        hintText: '16',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Obrigatório';
+                        final n = int.tryParse(v);
+                        if (n == null || n < 1) return 'Mín. 1';
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _lengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Compr. (cm) *',
+                        border: OutlineInputBorder(),
+                        hintText: '16',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Obrigatório';
+                        final n = int.tryParse(v);
+                        if (n == null || n < 1) return 'Mín. 1';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               SwitchListTile(

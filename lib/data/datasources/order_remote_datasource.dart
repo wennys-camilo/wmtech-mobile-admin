@@ -8,10 +8,30 @@ class OrderRemoteDatasource {
 
   final ApiClient _api;
 
-  /// GET /orders — lista todos os pedidos se JWT for admin, senão só do usuário.
-  Future<List<Order>> getAllOrders() async {
+  static String _dateToQuery(DateTime d) {
+    final y = d.year;
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
+  }
+
+  /// GET /orders — lista todos os pedidos se JWT for admin (com filtros opcionais), senão só do usuário.
+  Future<List<Order>> getAllOrders({
+    String? email,
+    String? cpf,
+    String? status,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) async {
+    final query = <String, String>{};
+    if (email != null && email.trim().isNotEmpty) query['email'] = email.trim();
+    if (cpf != null && cpf.trim().isNotEmpty) query['cpf'] = cpf.trim();
+    if (status != null && status.trim().isNotEmpty) query['status'] = status.trim();
+    if (dateFrom != null) query['dateFrom'] = _dateToQuery(dateFrom);
+    if (dateTo != null) query['dateTo'] = _dateToQuery(dateTo);
+    final path = query.isEmpty ? '/orders' : '/orders?${query.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}';
     try {
-      final list = await _api.get<List<dynamic>>('/orders', (v) => v is List ? v : []);
+      final list = await _api.get<List<dynamic>>(path, (v) => v is List ? v : []);
       return list
           .map((e) {
             try {

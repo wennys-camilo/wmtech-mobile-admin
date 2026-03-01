@@ -52,6 +52,11 @@ class ProductRemoteDatasource {
     }
     final categories = _parseCategories(map['categories']);
     final sections = _parseSections(map['sections']);
+    final weightKg = map['weightKg'] ?? map['weight_kg'];
+    final widthCm = map['widthCm'] ?? map['width_cm'];
+    final heightCm = map['heightCm'] ?? map['height_cm'];
+    final lengthCm = map['lengthCm'] ?? map['length_cm'];
+    final compareAtPrice = map['compareAtPrice'] ?? map['compare_at_price'];
     return Product(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
@@ -66,6 +71,11 @@ class ProductRemoteDatasource {
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
+      weightKg: weightKg != null ? _toDouble(weightKg) : null,
+      widthCm: widthCm != null ? (widthCm is num ? widthCm.toInt() : int.tryParse(widthCm.toString())) : null,
+      heightCm: heightCm != null ? (heightCm is num ? heightCm.toInt() : int.tryParse(heightCm.toString())) : null,
+      lengthCm: lengthCm != null ? (lengthCm is num ? lengthCm.toInt() : int.tryParse(lengthCm.toString())) : null,
+      compareAtPrice: compareAtPrice != null ? _toDouble(compareAtPrice) : null,
     );
   }
 
@@ -98,18 +108,28 @@ class ProductRemoteDatasource {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    required double weightKg,
+    required int widthCm,
+    required int heightCm,
+    required int lengthCm,
+    double? compareAtPrice,
   }) async {
     final body = <String, dynamic>{
       'name': name,
       'price': price,
       'stock': stock,
       'active': active,
+      'weightKg': weightKg,
+      'widthCm': widthCm,
+      'heightCm': heightCm,
+      'lengthCm': lengthCm,
     };
     if (description != null && description.isNotEmpty) body['description'] = description;
     if (sku != null && sku.isNotEmpty) body['sku'] = sku;
     if (images != null && images.isNotEmpty) body['images'] = images;
     if (categoryIds != null && categoryIds.isNotEmpty) body['categoryIds'] = categoryIds;
     if (sectionIds != null && sectionIds.isNotEmpty) body['sectionIds'] = sectionIds;
+    if (compareAtPrice != null && compareAtPrice > 0) body['compareAtPrice'] = compareAtPrice;
 
     return _api.post<Product>(
       '/products',
@@ -130,6 +150,12 @@ class ProductRemoteDatasource {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    double? weightKg,
+    int? widthCm,
+    int? heightCm,
+    int? lengthCm,
+    double? compareAtPrice,
+    bool setCompareAtPrice = false,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -141,6 +167,11 @@ class ProductRemoteDatasource {
     if (images != null) body['images'] = images;
     if (categoryIds != null) body['categoryIds'] = categoryIds;
     if (sectionIds != null) body['sectionIds'] = sectionIds;
+    if (weightKg != null) body['weightKg'] = weightKg;
+    if (widthCm != null) body['widthCm'] = widthCm;
+    if (heightCm != null) body['heightCm'] = heightCm;
+    if (lengthCm != null) body['lengthCm'] = lengthCm;
+    if (setCompareAtPrice) body['compareAtPrice'] = compareAtPrice;
 
     return _api.patch<Product>(
       '/products/$id',

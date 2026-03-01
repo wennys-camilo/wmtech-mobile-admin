@@ -25,6 +25,11 @@ class ProductRepositoryImpl implements ProductRepository {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    required double weightKg,
+    required int widthCm,
+    required int heightCm,
+    required int lengthCm,
+    double? compareAtPrice,
   }) {
     return _datasource.createProduct(
       name: name,
@@ -36,6 +41,11 @@ class ProductRepositoryImpl implements ProductRepository {
       images: images,
       categoryIds: categoryIds,
       sectionIds: sectionIds,
+      weightKg: weightKg,
+      widthCm: widthCm,
+      heightCm: heightCm,
+      lengthCm: lengthCm,
+      compareAtPrice: compareAtPrice,
     );
   }
 
@@ -51,6 +61,12 @@ class ProductRepositoryImpl implements ProductRepository {
     List<String>? images,
     List<String>? categoryIds,
     List<String>? sectionIds,
+    double? weightKg,
+    int? widthCm,
+    int? heightCm,
+    int? lengthCm,
+    double? compareAtPrice,
+    bool setCompareAtPrice = false,
   }) {
     return _datasource.updateProduct(
       id,
@@ -63,6 +79,12 @@ class ProductRepositoryImpl implements ProductRepository {
       images: images,
       categoryIds: categoryIds,
       sectionIds: sectionIds,
+      weightKg: weightKg,
+      widthCm: widthCm,
+      heightCm: heightCm,
+      lengthCm: lengthCm,
+      compareAtPrice: compareAtPrice,
+      setCompareAtPrice: setCompareAtPrice,
     );
   }
 }
