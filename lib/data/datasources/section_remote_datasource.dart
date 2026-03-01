@@ -25,4 +25,13 @@ class SectionRemoteDatasource {
         .whereType<Section>()
         .toList();
   }
+
+  /// POST /sections — cria seção.
+  Future<Section> createSection(String name) async {
+    return _api.post<Section>(
+      '/sections',
+      {'name': name.trim()},
+      (v) => Section.fromJson(v),
+    );
+  }
 }

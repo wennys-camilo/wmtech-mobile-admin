@@ -25,4 +25,13 @@ class CategoryRemoteDatasource {
         .whereType<Category>()
         .toList();
   }
+
+  /// POST /categories — cria categoria.
+  Future<Category> createCategory(String name) async {
+    return _api.post<Category>(
+      '/categories',
+      {'name': name.trim()},
+      (v) => Category.fromJson(v),
+    );
+  }
 }

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'presentation/login/login_page.dart';
-import 'presentation/products/products_list_page.dart';
+import 'presentation/home/admin_home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +64,6 @@ class _AuthGateState extends State<AuthGate> {
     if (_checking) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    return _loggedIn ? ProductsListPage() : LoginPage();
+    return _loggedIn ? AdminHomePage() : LoginPage();
   }
 }
