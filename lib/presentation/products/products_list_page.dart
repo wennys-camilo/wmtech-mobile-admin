@@ -83,42 +83,43 @@ class _ProductsListPageState extends State<ProductsListPage> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
+            child:
+                _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
                     ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(_error!, textAlign: TextAlign.center),
-                              const SizedBox(height: 16),
-                              FilledButton(onPressed: _load, child: const Text('Tentar novamente')),
-                            ],
-                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_error!, textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            FilledButton(onPressed: _load, child: const Text('Tentar novamente')),
+                          ],
                         ),
-                      )
+                      ),
+                    )
                     : _products.isEmpty
-                        ? const Center(child: Text('Nenhum produto cadastrado.'))
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              itemCount: _products.length,
-                              itemBuilder: (_, i) {
-                                final p = _products[i];
-                                return ListTile(
-                                  title: Text(p.name),
-                                  subtitle: Text(
-                                    'R\$ ${p.price.toStringAsFixed(2)} • Estoque: ${p.stock}${p.active ? '' : ' • Inativo'}',
-                                  ),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () => _openForm(p),
-                                );
-                              },
+                    ? const Center(child: Text('Nenhum produto cadastrado.'))
+                    : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: _products.length,
+                        itemBuilder: (_, i) {
+                          final p = _products[i];
+                          return ListTile(
+                            title: Text(p.name),
+                            subtitle: Text(
+                              'R\$ ${p.price.toStringAsFixed(2)} • Estoque: ${p.stock}${p.active ? '' : ' • Inativo'}',
                             ),
-                          ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => _openForm(p),
+                          );
+                        },
+                      ),
+                    ),
           ),
         ],
       ),
