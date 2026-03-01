@@ -32,11 +32,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
   bool _loading = false;
   String? _error;
   final List<XFile> _selectedFiles = [];
+  late List<String> _existingImageUrls;
 
   @override
   void initState() {
     super.initState();
     final p = widget.product;
+    _existingImageUrls = List.from(p?.images ?? []);
     _nameController = TextEditingController(text: p?.name ?? '');
     _descriptionController = TextEditingController(text: p?.description ?? '');
     _priceController = TextEditingController(text: p != null ? p.price.toStringAsFixed(2) : '');
@@ -76,6 +78,29 @@ class _ProductFormPageState extends State<ProductFormPage> {
     setState(() => _selectedFiles.removeAt(index));
   }
 
+  Future<void> _removeExistingImage(int index) async {
+    if (!widget.isEditing || widget.product == null) return;
+    final url = _existingImageUrls[index];
+    setState(() => _loading = true);
+    try {
+      final deleted = await _storage.deleteProductImageByUrl(url);
+      if (!mounted) return;
+      if (deleted) {
+        setState(() => _existingImageUrls.removeAt(index));
+        await widget._productRepository.updateProduct(
+          widget.product!.id,
+          images: List.from(_existingImageUrls),
+        );
+      } else {
+        setState(() => _error = 'Não foi possível remover a imagem do servidor.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -91,7 +116,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       final stock = int.tryParse(_stockController.text) ?? 0;
       final sku = _skuController.text.trim().isEmpty ? null : _skuController.text.trim();
 
-      List<String> imageUrls = List.from(widget.product?.images ?? []);
+      List<String> imageUrls = List.from(_existingImageUrls);
 
       if (widget.isEditing && widget.product != null) {
         await widget._productRepository.updateProduct(
@@ -145,7 +170,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final existingImages = widget.product?.images ?? [];
     final hasStorage = _storage.isAvailable;
 
     return Scaffold(
@@ -234,13 +258,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
                   ),
                 ),
-              if (existingImages.isNotEmpty) ...[
+              if (_existingImageUrls.isNotEmpty) ...[
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children:
-                      existingImages.map((url) {
-                        return ClipRRect(
+                  children: List.generate(_existingImageUrls.length, (i) {
+                    final url = _existingImageUrls[i];
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
                             url,
@@ -254,8 +281,24 @@ class _ProductFormPageState extends State<ProductFormPage> {
                                   child: Icon(Icons.broken_image),
                                 ),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        if (widget.isEditing)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              onPressed: _loading ? null : () => _removeExistingImage(i),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                                foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                                padding: const EdgeInsets.all(4),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
                 ),
                 const SizedBox(height: 8),
               ],

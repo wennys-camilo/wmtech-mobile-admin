@@ -38,4 +38,31 @@ class SupabaseStorageService {
       return null;
     }
   }
+
+  /// Extrai o path no bucket a partir da URL pública.
+  /// URL esperada: .../storage/v1/object/public/product-images/{path}
+  static String? pathFromPublicUrl(String publicUrl) {
+    const prefix = '/object/public/$bucket/';
+    final i = publicUrl.indexOf(prefix);
+    if (i == -1) return null;
+    return publicUrl.substring(i + prefix.length);
+  }
+
+  /// Remove uma imagem do bucket usando a URL pública retornada no upload.
+  /// Retorna true se a remoção foi feita (ou cliente indisponível), false em erro.
+  Future<bool> deleteProductImageByUrl(String imageUrl) async {
+    if (_client == null) return true;
+    final path = pathFromPublicUrl(imageUrl);
+    if (path == null || path.isEmpty) {
+      debugPrint('Could not extract storage path from URL: $imageUrl');
+      return false;
+    }
+    try {
+      await _client.storage.from(bucket).remove([path]);
+      return true;
+    } catch (error) {
+      debugPrint('Error deleting product image: $error');
+      return false;
+    }
+  }
 }
