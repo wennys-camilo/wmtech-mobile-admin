@@ -13,6 +13,13 @@ class ProductRemoteDatasource {
       throw FormatException('Invalid product json');
     }
     final map = Map<String, dynamic>.from(json);
+    List<String>? images;
+    if (map['images'] != null && map['images'] is List) {
+      images = (map['images'] as List)
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
     return Product(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
@@ -21,6 +28,7 @@ class ProductRemoteDatasource {
       stock: (map['stock'] as num?)?.toInt() ?? 0,
       sku: map['sku'] as String?,
       active: map['active'] as bool? ?? true,
+      images: images,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -53,6 +61,7 @@ class ProductRemoteDatasource {
     required int stock,
     String? sku,
     bool active = true,
+    List<String>? images,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -62,6 +71,7 @@ class ProductRemoteDatasource {
     };
     if (description != null && description.isNotEmpty) body['description'] = description;
     if (sku != null && sku.isNotEmpty) body['sku'] = sku;
+    if (images != null && images.isNotEmpty) body['images'] = images;
 
     return _api.post<Product>(
       '/products',
@@ -79,6 +89,7 @@ class ProductRemoteDatasource {
     int? stock,
     String? sku,
     bool? active,
+    List<String>? images,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -87,6 +98,7 @@ class ProductRemoteDatasource {
     if (stock != null) body['stock'] = stock;
     if (sku != null) body['sku'] = sku;
     if (active != null) body['active'] = active;
+    if (images != null) body['images'] = images;
 
     return _api.patch<Product>(
       '/products/$id',

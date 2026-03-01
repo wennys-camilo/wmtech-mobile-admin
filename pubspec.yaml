@@ -34,6 +34,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   dio: ^5.4.0
   shared_preferences: ^2.2.2
+  supabase_flutter: ^2.8.0
+  image_picker: ^1.0.7
+  uuid: ^4.3.3
 
 dev_dependencies:
   flutter_test:

@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/config.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'presentation/login/login_page.dart';
 import 'presentation/products/products_list_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (AppConfig.hasSupabase) {
+    await Supabase.initialize(url: AppConfig.supabaseUrl, anonKey: AppConfig.supabaseAnonKey);
+  }
   runApp(const WmtechAdminApp());
 }
 

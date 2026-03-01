@@ -8,6 +8,7 @@ class Product {
     required this.stock,
     this.sku,
     this.active = true,
+    this.images,
     this.createdAt,
   });
 
@@ -18,6 +19,7 @@ class Product {
   final int stock;
   final String? sku;
   final bool active;
+  final List<String>? images;
   final DateTime? createdAt;
 
   Product copyWith({
@@ -28,6 +30,7 @@ class Product {
     int? stock,
     String? sku,
     bool? active,
+    List<String>? images,
     DateTime? createdAt,
   }) {
     return Product(
@@ -38,6 +41,7 @@ class Product {
       stock: stock ?? this.stock,
       sku: sku ?? this.sku,
       active: active ?? this.active,
+      images: images ?? this.images,
       createdAt: createdAt ?? this.createdAt,
     );
   }
