@@ -1,5 +1,6 @@
 import '../../core/api_client.dart';
 import '../../domain/entities/consignment.dart';
+import '../../domain/entities/consignment_reconciliation_log.dart';
 
 class ConsignmentRemoteDatasource {
   ConsignmentRemoteDatasource([ApiClient? apiClient])
@@ -7,10 +8,13 @@ class ConsignmentRemoteDatasource {
 
   final ApiClient _api;
 
-  /// GET /consignments — lista consignações (admin).
-  Future<List<Consignment>> getConsignments() async {
+  /// GET /consignments — lista consignações (admin). Opcional storeId para filtrar por loja.
+  Future<List<Consignment>> getConsignments({String? storeId}) async {
+    final path = storeId != null && storeId.isNotEmpty
+        ? '/consignments?storeId=${Uri.encodeComponent(storeId)}'
+        : '/consignments';
     final list = await _api.get<List<dynamic>>(
-      '/consignments',
+      path,
       (v) => v is List ? v : [],
     );
     return list
@@ -48,14 +52,15 @@ class ConsignmentRemoteDatasource {
     return _api.post<Consignment>('/consignments', body, (v) => Consignment.fromJson(v));
   }
 
-  /// PATCH /consignments/:id
+  /// PATCH /consignments/:id. countAtStore = contagem na loja (reconciliação); incluir updateCountAtStore: true para enviar (ou null para limpar).
   Future<Consignment> updateConsignment(
     String id, {
-    int? quantityReturned,
+    int? countAtStore,
+    bool updateCountAtStore = false,
     String? notes,
   }) async {
     final body = <String, dynamic>{};
-    if (quantityReturned != null) body['quantityReturned'] = quantityReturned;
+    if (updateCountAtStore) body['countAtStore'] = countAtStore;
     if (notes != null) body['notes'] = notes;
     return _api.patch<Consignment>('/consignments/$id', body, (v) => Consignment.fromJson(v));
   }
@@ -63,5 +68,23 @@ class ConsignmentRemoteDatasource {
   /// DELETE /consignments/:id
   Future<void> deleteConsignment(String id) async {
     await _api.delete('/consignments/$id');
+  }
+
+  /// GET /consignments/:id/reconciliation-logs — histórico de conferências (quando disponível na API).
+  Future<List<ConsignmentReconciliationLog>> getReconciliationLogs(String consignmentId) async {
+    final list = await _api.get<List<dynamic>>(
+      '/consignments/$consignmentId/reconciliation-logs',
+      (v) => v is List ? v : [],
+    );
+    return list
+        .map((e) {
+          try {
+            return ConsignmentReconciliationLog.fromJson(e);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<ConsignmentReconciliationLog>()
+        .toList();
   }
 }

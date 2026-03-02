@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../data/datasources/consignment_remote_datasource.dart';
+import '../../data/datasources/store_remote_datasource.dart';
 import '../../domain/entities/consignment.dart';
+import '../../domain/entities/store.dart';
 import 'consignment_form_page.dart';
 import 'consignment_detail_page.dart';
 import '../stores/stores_list_page.dart';
@@ -13,15 +15,37 @@ class ConsignmentsListPage extends StatefulWidget {
 }
 
 class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
-  final _datasource = ConsignmentRemoteDatasource();
+  final _consignmentDs = ConsignmentRemoteDatasource();
+  final _storeDs = StoreRemoteDatasource();
   List<Consignment> _list = [];
+  List<Store> _stores = [];
   bool _loading = true;
+  bool _loadingStores = true;
   String? _error;
+  bool _filterConferidasOnly = false;
+  /// null = Todas as lojas; otherwise filter by this store id.
+  String? _selectedStoreId;
 
   @override
   void initState() {
     super.initState();
+    _loadStores();
     _load();
+  }
+
+  Future<void> _loadStores() async {
+    setState(() => _loadingStores = true);
+    try {
+      final list = await _storeDs.getStores();
+      if (!mounted) return;
+      setState(() {
+        _stores = list;
+        _loadingStores = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingStores = false);
+    }
   }
 
   Future<void> _load() async {
@@ -30,7 +54,7 @@ class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
       _error = null;
     });
     try {
-      final list = await _datasource.getConsignments();
+      final list = await _consignmentDs.getConsignments(storeId: _selectedStoreId);
       if (!mounted) return;
       setState(() {
         _list = list;
@@ -47,6 +71,12 @@ class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
 
   void _openLojas() async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StoresListPage()));
+    _loadStores();
+    _load();
+  }
+
+  void _onStoreFilterChanged(String? storeId) {
+    setState(() => _selectedStoreId = storeId);
     _load();
   }
 
@@ -132,14 +162,53 @@ class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: OutlinedButton.icon(
-                          onPressed: _openLojas,
-                          icon: const Icon(Icons.store, size: 20),
-                          label: const Text('Gerenciar lojas'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _openLojas,
+                                  icon: const Icon(Icons.store, size: 20),
+                                  label: const Text('Gerenciar lojas'),
+                                ),
+                                const SizedBox(width: 8),
+                                FilterChip(
+                                  label: Text(_filterConferidasOnly ? 'Só conferidas' : 'Todas'),
+                                  selected: _filterConferidasOnly,
+                                  onSelected: (v) => setState(() => _filterConferidasOnly = v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String?>(
+                              value: _selectedStoreId,
+                              decoration: const InputDecoration(
+                                labelText: 'Loja',
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('Todas as lojas'),
+                                ),
+                                ..._stores.map((s) => DropdownMenuItem<String?>(
+                                      value: s.id,
+                                      child: Text(s.name),
+                                    )),
+                              ],
+                              onChanged: _loadingStores ? null : _onStoreFilterChanged,
+                            ),
+                          ],
                         ),
                       ),
-                      ...List.generate(_list.length, (i) {
-                        final c = _list[i];
+                      ...() {
+                        final filtered = _filterConferidasOnly
+                            ? _list.where((c) => c.countAtStore != null).toList()
+                            : _list;
+                        return List.generate(filtered.length, (i) {
+                          final c = filtered[i];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
@@ -154,7 +223,14 @@ class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
                                 const SizedBox(height: 4),
                                 Text(c.storeName ?? c.storeId),
                                 Text(
-                                  '${c.quantity} deixados · ${c.quantityReturned} devolvidos · ${_formatDate(c.placedAt)}',
+                                  '${c.quantity} deixados · ${_formatDate(c.placedAt)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  'Vendidos: ${c.quantitySold != null ? c.quantitySold : 'Não conferido'}${c.totalSalesValue != null ? ' · Valor: R\$ ${c.totalSalesValue!.toStringAsFixed(2).replaceAll('.', ',')}' : ''}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -166,7 +242,8 @@ class _ConsignmentsListPageState extends State<ConsignmentsListPage> {
                             onTap: () => _openDetail(c),
                           ),
                         );
-                      }),
+                        });
+                      }(),
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/datasources/consignment_remote_datasource.dart';
 import '../../domain/entities/consignment.dart';
+import '../../domain/entities/consignment_reconciliation_log.dart';
 
 class ConsignmentDetailPage extends StatefulWidget {
   const ConsignmentDetailPage({super.key, required this.consignmentId});
@@ -17,8 +18,10 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
+  List<ConsignmentReconciliationLog>? _reconciliationLogs;
+  bool? _reconciliationLogsAvailable; // true = loaded, false = API not available, null = not loaded
 
-  final _quantityReturnedController = TextEditingController();
+  final _countAtStoreController = TextEditingController();
   final _notesController = TextEditingController();
 
   @override
@@ -29,13 +32,13 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
 
   @override
   void dispose() {
-    _quantityReturnedController.dispose();
+    _countAtStoreController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
   void _syncFromConsignment(Consignment c) {
-    _quantityReturnedController.text = '${c.quantityReturned}';
+    _countAtStoreController.text = c.countAtStore != null ? '${c.countAtStore}' : '';
     _notesController.text = c.notes ?? '';
   }
 
@@ -43,6 +46,8 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
     setState(() {
       _loading = true;
       _error = null;
+      _reconciliationLogs = null;
+      _reconciliationLogsAvailable = null;
     });
     try {
       final c = await _datasource.getConsignmentById(widget.consignmentId);
@@ -52,6 +57,7 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
         _loading = false;
         _syncFromConsignment(c);
       });
+      _loadReconciliationLogs();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -61,15 +67,30 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
     }
   }
 
+  Future<void> _loadReconciliationLogs() async {
+    try {
+      final list = await _datasource.getReconciliationLogs(widget.consignmentId);
+      if (!mounted) return;
+      setState(() {
+        _reconciliationLogs = list;
+        _reconciliationLogsAvailable = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _reconciliationLogsAvailable = false);
+    }
+  }
+
   Future<void> _save() async {
     final c = _consignment;
     if (c == null || _saving) return;
-    final qtyReturned = int.tryParse(_quantityReturnedController.text.trim());
-    if (qtyReturned == null || qtyReturned < 0 || qtyReturned > c.quantity) {
+    final countStr = _countAtStoreController.text.trim();
+    final countAtStore = countStr.isEmpty ? null : int.tryParse(countStr);
+    if (countStr.isNotEmpty && (countAtStore == null || countAtStore < 0 || countAtStore > c.quantity)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Quantidade devolvida deve ser entre 0 e ${c.quantity}',
+            'Contagem na loja deve ser entre 0 e ${c.quantity}',
           ),
         ),
       );
@@ -79,7 +100,8 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
     try {
       final updated = await _datasource.updateConsignment(
         c.id,
-        quantityReturned: qtyReturned,
+        countAtStore: countAtStore,
+        updateCountAtStore: true,
         notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       );
       if (!mounted) return;
@@ -88,8 +110,17 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
         _saving = false;
         _syncFromConsignment(updated);
       });
+      _loadReconciliationLogs();
+      final vendidos = updated.quantitySold ?? 0;
+      final valor = updated.totalSalesValue;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Consignação atualizada.')),
+        SnackBar(
+          content: Text(
+            valor != null
+                ? 'Conferência salva. Vendidos: $vendidos · Valor: R\$ ${valor.toStringAsFixed(2)}'
+                : 'Conferência salva. Vendidos: $vendidos',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -147,6 +178,24 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
       if (parts.length == 3) {
         return '${parts[2]}/${parts[1]}/${parts[0]}';
       }
+    }
+    return s;
+  }
+
+  String _formatCurrency(double? v) {
+    if (v == null) return '—';
+    return 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  String _formatLoggedAt(String s) {
+    if (s.length >= 19) {
+      final date = s.substring(0, 10).split('-');
+      final time = s.substring(11, 19);
+      if (date.length == 3) return '${date[2]}/${date[1]}/${date[0]} $time';
+    }
+    if (s.length >= 10) {
+      final date = s.substring(0, 10).split('-');
+      if (date.length == 3) return '${date[2]}/${date[1]}/${date[0]}';
     }
     return s;
   }
@@ -212,22 +261,42 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text('Deixados: ${c.quantity} · Devolvidos: ${c.quantityReturned} · Em loja: ${c.quantityRemaining}'),
                     Text('Data: ${_formatPlacedAt(c.placedAt)}'),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Conferência',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Deixados: ${c.quantity}'),
+                    Text('Contagem na loja: ${c.countAtStore ?? '—'}'),
+                    Text('Vendidos: ${c.quantitySold != null ? c.quantitySold : 'Não conferido'}'),
+                    Text('Preço no dia: ${_formatCurrency(c.unitPriceAtPlacement)}'),
+                    Text('Valor total vendidos: ${_formatCurrency(c.totalSalesValue)}'),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'Quantidade devolvida',
+              'Contagem atual na loja',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             TextField(
-              controller: _quantityReturnedController,
+              controller: _countAtStoreController,
               decoration: InputDecoration(
-                hintText: '0 a ${c.quantity}',
+                hintText: 'Quantidade que ainda está na loja hoje (0 a ${c.quantity})',
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -259,6 +328,41 @@ class _ConsignmentDetailPageState extends State<ConsignmentDetailPage> {
                     )
                   : const Text('Salvar alterações'),
             ),
+            if (_reconciliationLogsAvailable == true) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Histórico de conferências',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: _reconciliationLogs == null
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : _reconciliationLogs!.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('Nenhuma conferência registrada ainda.'),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _reconciliationLogs!.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, i) {
+                              final log = _reconciliationLogs![i];
+                              return ListTile(
+                                title: Text('${_formatLoggedAt(log.loggedAt)} · Contagem: ${log.countAtStore}'),
+                                subtitle: log.notes != null && log.notes!.isNotEmpty
+                                    ? Text(log.notes!)
+                                    : null,
+                              );
+                            },
+                          ),
+              ),
+            ],
           ],
         ),
       ),
