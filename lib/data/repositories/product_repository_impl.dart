@@ -30,6 +30,8 @@ class ProductRepositoryImpl implements ProductRepository {
     required int heightCm,
     required int lengthCm,
     double? compareAtPrice,
+    String? couponCode,
+    bool couponActive = false,
   }) {
     return _datasource.createProduct(
       name: name,
@@ -46,6 +48,8 @@ class ProductRepositoryImpl implements ProductRepository {
       heightCm: heightCm,
       lengthCm: lengthCm,
       compareAtPrice: compareAtPrice,
+      couponCode: couponCode,
+      couponActive: couponActive,
     );
   }
 
@@ -67,6 +71,9 @@ class ProductRepositoryImpl implements ProductRepository {
     int? lengthCm,
     double? compareAtPrice,
     bool setCompareAtPrice = false,
+    String? couponCode,
+    bool? couponActive,
+    bool setCouponFields = false,
   }) {
     return _datasource.updateProduct(
       id,
@@ -85,6 +92,9 @@ class ProductRepositoryImpl implements ProductRepository {
       lengthCm: lengthCm,
       compareAtPrice: compareAtPrice,
       setCompareAtPrice: setCompareAtPrice,
+      couponCode: couponCode,
+      couponActive: couponActive,
+      setCouponFields: setCouponFields,
     );
   }
 }

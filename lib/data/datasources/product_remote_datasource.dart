@@ -57,6 +57,9 @@ class ProductRemoteDatasource {
     final heightCm = map['heightCm'] ?? map['height_cm'];
     final lengthCm = map['lengthCm'] ?? map['length_cm'];
     final compareAtPrice = map['compareAtPrice'] ?? map['compare_at_price'];
+    final couponCode = map['couponCode'] as String? ?? map['coupon_code'] as String?;
+    final couponActiveRaw = map['couponActive'] ?? map['coupon_active'];
+    final couponActive = couponActiveRaw is bool ? couponActiveRaw : false;
     return Product(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
@@ -76,6 +79,8 @@ class ProductRemoteDatasource {
       heightCm: heightCm != null ? (heightCm is num ? heightCm.toInt() : int.tryParse(heightCm.toString())) : null,
       lengthCm: lengthCm != null ? (lengthCm is num ? lengthCm.toInt() : int.tryParse(lengthCm.toString())) : null,
       compareAtPrice: compareAtPrice != null ? _toDouble(compareAtPrice) : null,
+      couponCode: (couponCode == null || couponCode.trim().isEmpty) ? null : couponCode.trim(),
+      couponActive: couponActive,
     );
   }
 
@@ -113,6 +118,8 @@ class ProductRemoteDatasource {
     required int heightCm,
     required int lengthCm,
     double? compareAtPrice,
+    String? couponCode,
+    bool couponActive = false,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -130,6 +137,8 @@ class ProductRemoteDatasource {
     if (categoryIds != null && categoryIds.isNotEmpty) body['categoryIds'] = categoryIds;
     if (sectionIds != null && sectionIds.isNotEmpty) body['sectionIds'] = sectionIds;
     if (compareAtPrice != null && compareAtPrice > 0) body['compareAtPrice'] = compareAtPrice;
+    if (couponCode != null && couponCode.trim().isNotEmpty) body['couponCode'] = couponCode.trim();
+    body['couponActive'] = couponActive;
 
     return _api.post<Product>(
       '/products',
@@ -156,6 +165,9 @@ class ProductRemoteDatasource {
     int? lengthCm,
     double? compareAtPrice,
     bool setCompareAtPrice = false,
+    String? couponCode,
+    bool? couponActive,
+    bool setCouponFields = false,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -172,6 +184,10 @@ class ProductRemoteDatasource {
     if (heightCm != null) body['heightCm'] = heightCm;
     if (lengthCm != null) body['lengthCm'] = lengthCm;
     if (setCompareAtPrice) body['compareAtPrice'] = compareAtPrice;
+    if (setCouponFields == true) {
+      body['couponCode'] = couponCode?.trim().isEmpty == true ? null : couponCode?.trim();
+      body['couponActive'] = couponActive ?? false;
+    }
 
     return _api.patch<Product>(
       '/products/$id',

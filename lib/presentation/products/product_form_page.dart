@@ -37,7 +37,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late final TextEditingController _widthController;
   late final TextEditingController _heightController;
   late final TextEditingController _lengthController;
+  late final TextEditingController _couponCodeController;
   bool _active = true;
+  bool _couponActive = false;
   bool _loading = false;
   String? _error;
   final List<XFile> _selectedFiles = [];
@@ -76,7 +78,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _lengthController = TextEditingController(
       text: p?.lengthCm?.toString() ?? '16',
     );
+    _couponCodeController = TextEditingController(text: p?.couponCode ?? '');
     _active = p?.active ?? true;
+    _couponActive = p?.couponActive ?? false;
     _loadCategories();
     _loadSections();
   }
@@ -107,6 +111,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _widthController.dispose();
     _heightController.dispose();
     _lengthController.dispose();
+    _couponCodeController.dispose();
     super.dispose();
   }
 
@@ -176,6 +181,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       final widthCm = int.tryParse(_widthController.text) ?? 16;
       final heightCm = int.tryParse(_heightController.text) ?? 16;
       final lengthCm = int.tryParse(_lengthController.text) ?? 16;
+      final couponCode = _couponCodeController.text.trim().isEmpty ? null : _couponCodeController.text.trim();
 
       List<String> imageUrls = List.from(_existingImageUrls);
 
@@ -196,6 +202,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
           lengthCm: lengthCm,
           compareAtPrice: compareAtPrice,
           setCompareAtPrice: true,
+          couponCode: couponCode,
+          couponActive: _couponActive,
+          setCouponFields: true,
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -221,6 +230,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
           heightCm: heightCm,
           lengthCm: lengthCm,
           compareAtPrice: (compareAtPrice != null && compareAtPrice > 0) ? compareAtPrice : null,
+          couponCode: couponCode,
+          couponActive: _couponActive,
         );
         if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
           for (final file in _selectedFiles) {
@@ -419,6 +430,22 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 title: const Text('Ativo'),
                 value: _active,
                 onChanged: (v) => setState(() => _active = v),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _couponCodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Código do cupom',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ex.: VERAO10',
+                ),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text('Cupom ativo'),
+                value: _couponActive,
+                onChanged: (v) => setState(() => _couponActive = v),
               ),
               const SizedBox(height: 24),
               const Text('Categorias', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),

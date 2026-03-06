@@ -22,6 +22,8 @@ abstract class ProductRepository {
     required int heightCm,
     required int lengthCm,
     double? compareAtPrice,
+    String? couponCode,
+    bool couponActive = false,
   });
 
   /// Atualiza um produto. Requer autenticação.
@@ -42,5 +44,8 @@ abstract class ProductRepository {
     int? lengthCm,
     double? compareAtPrice,
     bool setCompareAtPrice = false,
+    String? couponCode,
+    bool? couponActive,
+    bool setCouponFields = false,
   });
 }

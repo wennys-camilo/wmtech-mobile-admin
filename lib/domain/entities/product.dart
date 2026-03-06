@@ -20,6 +20,8 @@ class Product {
     this.heightCm,
     this.lengthCm,
     this.compareAtPrice,
+    this.couponCode,
+    this.couponActive = false,
   });
 
   final String id;
@@ -39,6 +41,10 @@ class Product {
   final int? lengthCm;
   /// Preço de referência ("de"); quando > price exibe desconto.
   final double? compareAtPrice;
+  /// Código de cupom do produto (opcional).
+  final String? couponCode;
+  /// Se o cupom do produto está ativo.
+  final bool couponActive;
 
   Product copyWith({
     String? id,
@@ -57,6 +63,8 @@ class Product {
     int? heightCm,
     int? lengthCm,
     double? compareAtPrice,
+    String? couponCode,
+    bool? couponActive,
   }) {
     return Product(
       id: id ?? this.id,
@@ -75,6 +83,8 @@ class Product {
       heightCm: heightCm ?? this.heightCm,
       lengthCm: lengthCm ?? this.lengthCm,
       compareAtPrice: compareAtPrice ?? this.compareAtPrice,
+      couponCode: couponCode ?? this.couponCode,
+      couponActive: couponActive ?? this.couponActive,
     );
   }
 }
