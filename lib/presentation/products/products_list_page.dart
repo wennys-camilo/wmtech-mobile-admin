@@ -50,13 +50,17 @@ class _ProductsListPageState extends State<ProductsListPage> {
   }
 
   void _openForm([Product? product]) async {
-    await Navigator.of(context).push(
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder:
             (_) => ProductFormPage(productRepository: widget._productRepository, product: product),
       ),
     );
-    _load();
+    if (result == 'deleted' && product != null) {
+      setState(() => _products.removeWhere((p) => p.id == product.id));
+    } else {
+      _load();
+    }
   }
 
   @override

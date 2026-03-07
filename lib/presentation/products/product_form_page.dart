@@ -159,6 +159,49 @@ class _ProductFormPageState extends State<ProductFormPage> {
     }
   }
 
+  Future<void> _deleteProduct() async {
+    if (!widget.isEditing || widget.product == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir produto'),
+        content: Text(
+          'Tem certeza que deseja excluir "${widget.product!.name}"? Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    try {
+      await widget._productRepository.deleteProduct(widget.product!.id);
+      if (!mounted) return;
+      Navigator.of(context).pop('deleted');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -260,7 +303,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
     final hasStorage = _storage.isAvailable;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isEditing ? 'Editar produto' : 'Novo produto')),
+      appBar: AppBar(
+        title: Text(widget.isEditing ? 'Editar produto' : 'Novo produto'),
+        actions: [
+          if (widget.isEditing)
+            IconButton(
+              tooltip: 'Excluir produto',
+              icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+              onPressed: _loading ? null : _deleteProduct,
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

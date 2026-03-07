@@ -26,6 +26,9 @@ abstract class ProductRepository {
     bool couponActive = false,
   });
 
+  /// Exclui um produto pelo ID. Requer autenticação.
+  Future<void> deleteProduct(String id);
+
   /// Atualiza um produto. Requer autenticação.
   Future<Product> updateProduct(
     String id, {

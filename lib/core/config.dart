@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:wmtech_admin/core/app_env.dart';
 
 /// Configuração da aplicação (URL da API e Supabase).
@@ -12,8 +10,7 @@ class AppConfig {
     const env = String.fromEnvironment('API_BASE_URL', defaultValue: '');
     if (env.isNotEmpty) return env;
 
-    if (Platform.isAndroid) return 'http://10.0.2.2:3005';
-    return 'http://localhost:3005';
+    return AppEnv.config.apiBaseUrl;
   }
 
   static String get supabaseUrl {

@@ -54,6 +54,11 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Future<void> deleteProduct(String id) {
+    return _datasource.deleteProduct(id);
+  }
+
+  @override
   Future<Product> updateProduct(
     String id, {
     String? name,

@@ -147,6 +147,11 @@ class ProductRemoteDatasource {
     );
   }
 
+  /// DELETE /products/:id
+  Future<void> deleteProduct(String id) async {
+    await _api.delete('/products/$id');
+  }
+
   /// PATCH /products/:id
   Future<Product> updateProduct(
     String id, {
