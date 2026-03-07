@@ -32,6 +32,10 @@ class ProductRepositoryImpl implements ProductRepository {
     double? compareAtPrice,
     String? couponCode,
     bool couponActive = false,
+    int minQuantity = 1,
+    int maxQuantity = 100,
+    bool isPersonalized = false,
+    int? productionDays,
   }) {
     return _datasource.createProduct(
       name: name,
@@ -50,6 +54,10 @@ class ProductRepositoryImpl implements ProductRepository {
       compareAtPrice: compareAtPrice,
       couponCode: couponCode,
       couponActive: couponActive,
+      minQuantity: minQuantity,
+      maxQuantity: maxQuantity,
+      isPersonalized: isPersonalized,
+      productionDays: productionDays,
     );
   }
 
@@ -79,6 +87,11 @@ class ProductRepositoryImpl implements ProductRepository {
     String? couponCode,
     bool? couponActive,
     bool setCouponFields = false,
+    int? minQuantity,
+    int? maxQuantity,
+    bool? isPersonalized,
+    int? productionDays,
+    bool setPersonalizedFields = false,
   }) {
     return _datasource.updateProduct(
       id,
@@ -100,6 +113,11 @@ class ProductRepositoryImpl implements ProductRepository {
       couponCode: couponCode,
       couponActive: couponActive,
       setCouponFields: setCouponFields,
+      minQuantity: minQuantity,
+      maxQuantity: maxQuantity,
+      isPersonalized: isPersonalized,
+      productionDays: productionDays,
+      setPersonalizedFields: setPersonalizedFields,
     );
   }
 }

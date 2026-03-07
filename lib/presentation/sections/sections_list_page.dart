@@ -73,12 +73,97 @@ class _SectionsListPageState extends State<SectionsListPage> {
       ),
     );
     if (result != true || !mounted) return;
-    final name = nameController.text.trim();
     try {
-      await _datasource.createSection(name);
+      await _datasource.createSection(nameController.text.trim());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Seção criada.')),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _showRenameDialog(Section section) async {
+    final nameController = TextEditingController(text: section.name);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Renomear seção'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Nome',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) return;
+              Navigator.of(ctx).pop(true);
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    if (result != true || !mounted) return;
+    final newName = nameController.text.trim();
+    if (newName == section.name) return;
+    try {
+      await _datasource.updateSection(section.id, newName);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seção renomeada.')),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete(Section section) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir seção'),
+        content: Text('Deseja excluir "${section.name}"? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await _datasource.deleteSection(section.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seção excluída.')),
       );
       _load();
     } catch (e) {
@@ -119,9 +204,33 @@ class _SectionsListPageState extends State<SectionsListPage> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: _sections.length,
                         itemBuilder: (_, i) {
-                          final s = _sections[i];
+                          final sec = _sections[i];
                           return ListTile(
-                            title: Text(s.name),
+                            title: Text(sec.name),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (action) {
+                                if (action == 'rename') _showRenameDialog(sec);
+                                if (action == 'delete') _confirmDelete(sec);
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'rename',
+                                  child: ListTile(
+                                    leading: Icon(Icons.edit_outlined),
+                                    title: Text('Renomear'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading: Icon(Icons.delete_outline),
+                                    title: Text('Excluir'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         },
                       ),

@@ -34,4 +34,18 @@ class SectionRemoteDatasource {
       (v) => Section.fromJson(v),
     );
   }
+
+  /// PATCH /sections/:id — renomeia seção.
+  Future<Section> updateSection(String id, String name) async {
+    return _api.patch<Section>(
+      '/sections/$id',
+      {'name': name.trim()},
+      (v) => Section.fromJson(v),
+    );
+  }
+
+  /// DELETE /sections/:id — exclui seção.
+  Future<void> deleteSection(String id) async {
+    await _api.delete('/sections/$id');
+  }
 }

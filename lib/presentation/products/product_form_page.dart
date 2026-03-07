@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/image_compress_service.dart';
 import '../../core/supabase_storage_service.dart';
 import '../../data/datasources/category_remote_datasource.dart';
 import '../../data/datasources/section_remote_datasource.dart';
@@ -8,6 +11,36 @@ import '../../domain/entities/category.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/entities/section.dart';
 import '../../domain/repositories/product_repository.dart';
+
+/// Imagem selecionada pelo image_picker com bytes já lidos em memória.
+/// Evita PathNotFound quando o arquivo temporário do sistema é removido antes do upload.
+/// Os bytes são comprimidos automaticamente antes de serem armazenados.
+class _PickedImage {
+  const _PickedImage({
+    required this.bytes,
+    required this.name,
+    required this.originalSize,
+    required this.compressedSize,
+  });
+
+  final Uint8List bytes;
+  final String name;
+  final int originalSize;
+  final int compressedSize;
+
+  bool get wasCompressed => compressedSize < originalSize;
+
+  static Future<_PickedImage> fromXFile(XFile file) async {
+    final original = await file.readAsBytes();
+    final compressed = await ImageCompressService.compress(original);
+    return _PickedImage(
+      bytes: compressed,
+      name: file.name,
+      originalSize: original.length,
+      compressedSize: compressed.length,
+    );
+  }
+}
 
 /// Formulário de criação/edição de produto. Inclui seleção de imagens (galeria/câmera) e upload para Supabase Storage.
 class ProductFormPage extends StatefulWidget {
@@ -38,11 +71,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late final TextEditingController _heightController;
   late final TextEditingController _lengthController;
   late final TextEditingController _couponCodeController;
+  late final TextEditingController _minQuantityController;
+  late final TextEditingController _maxQuantityController;
+  late final TextEditingController _productionDaysController;
   bool _active = true;
   bool _couponActive = false;
+  bool _isPersonalized = false;
   bool _loading = false;
   String? _error;
-  final List<XFile> _selectedFiles = [];
+  // Bytes lidos imediatamente no pick para evitar PathNotFound quando o arquivo
+  // temporário do image_picker é removido pelo sistema antes do upload.
+  final List<_PickedImage> _selectedImages = [];
   late List<String> _existingImageUrls;
   final _categoriesDatasource = CategoryRemoteDatasource();
   List<Category> _allCategories = [];
@@ -79,6 +118,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
       text: p?.lengthCm?.toString() ?? '16',
     );
     _couponCodeController = TextEditingController(text: p?.couponCode ?? '');
+    _minQuantityController = TextEditingController(text: (p?.minQuantity ?? 1).toString());
+    _maxQuantityController = TextEditingController(text: (p?.maxQuantity ?? 100).toString());
+    _isPersonalized = p?.isPersonalized ?? false;
+    _productionDaysController = TextEditingController(
+      text: p?.productionDays?.toString() ?? '',
+    );
     _active = p?.active ?? true;
     _couponActive = p?.couponActive ?? false;
     _loadCategories();
@@ -112,28 +157,32 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _heightController.dispose();
     _lengthController.dispose();
     _couponCodeController.dispose();
+    _minQuantityController.dispose();
+    _maxQuantityController.dispose();
+    _productionDaysController.dispose();
     super.dispose();
   }
 
   Future<void> _pickGallery() async {
     try {
       final list = await _picker.pickMultiImage();
-      if (!mounted) return;
-      setState(() => _selectedFiles.addAll(list));
+      if (!mounted || list.isEmpty) return;
+      final picked = await Future.wait(list.map(_PickedImage.fromXFile));
+      setState(() => _selectedImages.addAll(picked));
     } catch (_) {}
   }
 
   Future<void> _pickCamera() async {
     try {
       final photo = await _picker.pickImage(source: ImageSource.camera);
-      if (photo != null && mounted) {
-        setState(() => _selectedFiles.add(photo));
-      }
+      if (photo == null || !mounted) return;
+      final picked = await _PickedImage.fromXFile(photo);
+      setState(() => _selectedImages.add(picked));
     } catch (_) {}
   }
 
   void _removeSelectedAt(int index) {
-    setState(() => _selectedFiles.removeAt(index));
+    setState(() => _selectedImages.removeAt(index));
   }
 
   Future<void> _removeExistingImage(int index) async {
@@ -225,6 +274,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
       final heightCm = int.tryParse(_heightController.text) ?? 16;
       final lengthCm = int.tryParse(_lengthController.text) ?? 16;
       final couponCode = _couponCodeController.text.trim().isEmpty ? null : _couponCodeController.text.trim();
+      final minQuantity = int.tryParse(_minQuantityController.text) ?? 1;
+      final maxQuantity = int.tryParse(_maxQuantityController.text) ?? 100;
+      final productionDays = _isPersonalized
+          ? int.tryParse(_productionDaysController.text)
+          : null;
 
       List<String> imageUrls = List.from(_existingImageUrls);
 
@@ -248,10 +302,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
           couponCode: couponCode,
           couponActive: _couponActive,
           setCouponFields: true,
+          minQuantity: minQuantity,
+          maxQuantity: maxQuantity,
+          isPersonalized: _isPersonalized,
+          productionDays: productionDays,
+          setPersonalizedFields: true,
         );
-        if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
-          for (final file in _selectedFiles) {
-            final url = await _storage.uploadProductImage(widget.product!.id, file);
+        if (_storage.isAvailable && _selectedImages.isNotEmpty) {
+          for (final img in _selectedImages) {
+            final url = await _storage.uploadProductImageBytes(widget.product!.id, img.bytes, img.name);
             if (url != null) imageUrls.add(url);
           }
           if (imageUrls.isNotEmpty) {
@@ -275,10 +334,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
           compareAtPrice: (compareAtPrice != null && compareAtPrice > 0) ? compareAtPrice : null,
           couponCode: couponCode,
           couponActive: _couponActive,
+          minQuantity: minQuantity,
+          maxQuantity: maxQuantity,
+          isPersonalized: _isPersonalized,
+          productionDays: productionDays,
         );
-        if (_storage.isAvailable && _selectedFiles.isNotEmpty) {
-          for (final file in _selectedFiles) {
-            final url = await _storage.uploadProductImage(product.id, file);
+        if (_storage.isAvailable && _selectedImages.isNotEmpty) {
+          for (final img in _selectedImages) {
+            final url = await _storage.uploadProductImageBytes(product.id, img.bytes, img.name);
             if (url != null) imageUrls.add(url);
           }
           if (imageUrls.isNotEmpty) {
@@ -500,6 +563,82 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 value: _couponActive,
                 onChanged: (v) => setState(() => _couponActive = v),
               ),
+              const SizedBox(height: 16),
+              const Text(
+                'Limites de quantidade por pedido',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _minQuantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Qtd. mínima *',
+                        border: OutlineInputBorder(),
+                        hintText: '1',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n < 1) return 'Mín. 1';
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _maxQuantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Qtd. máxima *',
+                        border: OutlineInputBorder(),
+                        hintText: '100',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n < 1) return 'Mín. 1';
+                        final min = int.tryParse(_minQuantityController.text) ?? 1;
+                        if (n < min) return 'Deve ser ≥ mínimo';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('Produto personalizado'),
+                subtitle: const Text('Feito sob encomenda — exige prazo de produção'),
+                value: _isPersonalized,
+                onChanged: _loading
+                    ? null
+                    : (v) => setState(() {
+                          _isPersonalized = v;
+                          if (!v) _productionDaysController.clear();
+                        }),
+              ),
+              if (_isPersonalized) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _productionDaysController,
+                  decoration: const InputDecoration(
+                    labelText: 'Dias de produção *',
+                    border: OutlineInputBorder(),
+                    hintText: 'Ex.: 7',
+                    helperText: 'Dias úteis após confirmação do pedido',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (v) {
+                    if (!_isPersonalized) return null;
+                    final n = int.tryParse(v ?? '');
+                    if (n == null || n < 1) return 'Obrigatório quando o produto é personalizado (mín. 1)';
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 24),
               const Text('Categorias', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
@@ -605,29 +744,58 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 const SizedBox(height: 8),
               ],
-              if (_selectedFiles.isNotEmpty)
+              if (_selectedImages.isNotEmpty)
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: List.generate(_selectedFiles.length, (i) {
+                  children: List.generate(_selectedImages.length, (i) {
+                    final img = _selectedImages[i];
                     return Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: const Icon(Icons.image, size: 48),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            img.bytes,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        // Badge com tamanho comprimido
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.55),
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(8),
+                                bottomRight: Radius.circular(8),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              ImageCompressService.formatSize(img.compressedSize),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                         Positioned(
-                          top: 0,
-                          right: 0,
+                          top: -4,
+                          right: -4,
                           child: IconButton(
                             icon: const Icon(Icons.close, size: 20),
                             onPressed: () => _removeSelectedAt(i),
                             style: IconButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.surface,
+                              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
                               padding: const EdgeInsets.all(4),
                             ),
                           ),

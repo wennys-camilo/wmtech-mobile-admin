@@ -22,6 +22,10 @@ class Product {
     this.compareAtPrice,
     this.couponCode,
     this.couponActive = false,
+    this.minQuantity = 1,
+    this.maxQuantity = 100,
+    this.isPersonalized = false,
+    this.productionDays,
   });
 
   final String id;
@@ -45,6 +49,14 @@ class Product {
   final String? couponCode;
   /// Se o cupom do produto está ativo.
   final bool couponActive;
+  /// Quantidade mínima por pedido (default 1).
+  final int minQuantity;
+  /// Quantidade máxima por pedido (default 100).
+  final int maxQuantity;
+  /// Indica se o produto é personalizado/feito sob encomenda.
+  final bool isPersonalized;
+  /// Prazo de produção em dias úteis (obrigatório quando isPersonalized = true).
+  final int? productionDays;
 
   Product copyWith({
     String? id,
@@ -65,6 +77,10 @@ class Product {
     double? compareAtPrice,
     String? couponCode,
     bool? couponActive,
+    int? minQuantity,
+    int? maxQuantity,
+    bool? isPersonalized,
+    int? productionDays,
   }) {
     return Product(
       id: id ?? this.id,
@@ -85,6 +101,10 @@ class Product {
       compareAtPrice: compareAtPrice ?? this.compareAtPrice,
       couponCode: couponCode ?? this.couponCode,
       couponActive: couponActive ?? this.couponActive,
+      minQuantity: minQuantity ?? this.minQuantity,
+      maxQuantity: maxQuantity ?? this.maxQuantity,
+      isPersonalized: isPersonalized ?? this.isPersonalized,
+      productionDays: productionDays ?? this.productionDays,
     );
   }
 }

@@ -24,6 +24,10 @@ abstract class ProductRepository {
     double? compareAtPrice,
     String? couponCode,
     bool couponActive = false,
+    int minQuantity = 1,
+    int maxQuantity = 100,
+    bool isPersonalized = false,
+    int? productionDays,
   });
 
   /// Exclui um produto pelo ID. Requer autenticação.
@@ -50,5 +54,10 @@ abstract class ProductRepository {
     String? couponCode,
     bool? couponActive,
     bool setCouponFields = false,
+    int? minQuantity,
+    int? maxQuantity,
+    bool? isPersonalized,
+    int? productionDays,
+    bool setPersonalizedFields = false,
   });
 }

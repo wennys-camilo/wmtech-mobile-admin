@@ -60,6 +60,8 @@ class ProductRemoteDatasource {
     final couponCode = map['couponCode'] as String? ?? map['coupon_code'] as String?;
     final couponActiveRaw = map['couponActive'] ?? map['coupon_active'];
     final couponActive = couponActiveRaw is bool ? couponActiveRaw : false;
+    final minQuantityRaw = map['minQuantity'] ?? map['min_quantity'];
+    final maxQuantityRaw = map['maxQuantity'] ?? map['max_quantity'];
     return Product(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
@@ -81,6 +83,14 @@ class ProductRemoteDatasource {
       compareAtPrice: compareAtPrice != null ? _toDouble(compareAtPrice) : null,
       couponCode: (couponCode == null || couponCode.trim().isEmpty) ? null : couponCode.trim(),
       couponActive: couponActive,
+      minQuantity: minQuantityRaw != null ? (minQuantityRaw is num ? minQuantityRaw.toInt() : int.tryParse(minQuantityRaw.toString()) ?? 1) : 1,
+      maxQuantity: maxQuantityRaw != null ? (maxQuantityRaw is num ? maxQuantityRaw.toInt() : int.tryParse(maxQuantityRaw.toString()) ?? 100) : 100,
+      isPersonalized: (map['isPersonalized'] ?? map['is_personalized']) as bool? ?? false,
+      productionDays: () {
+        final raw = map['productionDays'] ?? map['production_days'];
+        if (raw == null) return null;
+        return raw is num ? raw.toInt() : int.tryParse(raw.toString());
+      }(),
     );
   }
 
@@ -120,6 +130,10 @@ class ProductRemoteDatasource {
     double? compareAtPrice,
     String? couponCode,
     bool couponActive = false,
+    int minQuantity = 1,
+    int maxQuantity = 100,
+    bool isPersonalized = false,
+    int? productionDays,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -130,7 +144,11 @@ class ProductRemoteDatasource {
       'widthCm': widthCm,
       'heightCm': heightCm,
       'lengthCm': lengthCm,
+      'minQuantity': minQuantity,
+      'maxQuantity': maxQuantity,
+      'isPersonalized': isPersonalized,
     };
+    if (isPersonalized && productionDays != null) body['productionDays'] = productionDays;
     if (description != null && description.isNotEmpty) body['description'] = description;
     if (sku != null && sku.isNotEmpty) body['sku'] = sku;
     if (images != null && images.isNotEmpty) body['images'] = images;
@@ -173,6 +191,11 @@ class ProductRemoteDatasource {
     String? couponCode,
     bool? couponActive,
     bool setCouponFields = false,
+    int? minQuantity,
+    int? maxQuantity,
+    bool? isPersonalized,
+    int? productionDays,
+    bool setPersonalizedFields = false,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
@@ -192,6 +215,12 @@ class ProductRemoteDatasource {
     if (setCouponFields == true) {
       body['couponCode'] = couponCode?.trim().isEmpty == true ? null : couponCode?.trim();
       body['couponActive'] = couponActive ?? false;
+    }
+    if (minQuantity != null) body['minQuantity'] = minQuantity;
+    if (maxQuantity != null) body['maxQuantity'] = maxQuantity;
+    if (setPersonalizedFields) {
+      body['isPersonalized'] = isPersonalized ?? false;
+      body['productionDays'] = productionDays;
     }
 
     return _api.patch<Product>(

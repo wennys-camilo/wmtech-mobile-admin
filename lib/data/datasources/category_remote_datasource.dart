@@ -34,4 +34,18 @@ class CategoryRemoteDatasource {
       (v) => Category.fromJson(v),
     );
   }
+
+  /// PATCH /categories/:id — renomeia categoria.
+  Future<Category> updateCategory(String id, String name) async {
+    return _api.patch<Category>(
+      '/categories/$id',
+      {'name': name.trim()},
+      (v) => Category.fromJson(v),
+    );
+  }
+
+  /// DELETE /categories/:id — exclui categoria.
+  Future<void> deleteCategory(String id) async {
+    await _api.delete('/categories/$id');
+  }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,8 +25,18 @@ class SupabaseStorageService {
   Future<String?> uploadProductImage(String productId, XFile file) async {
     if (_client == null) return null;
     final bytes = await file.readAsBytes();
-    final name = file.name;
-    final ext = name.contains('.') ? name.split('.').last : 'jpg';
+    return uploadProductImageBytes(productId, bytes, file.name);
+  }
+
+  /// Faz upload de bytes já lidos em memória para product-images/{productId}/{uuid}.ext
+  /// Use este método quando os bytes foram lidos imediatamente após o pick (evita PathNotFound).
+  Future<String?> uploadProductImageBytes(
+    String productId,
+    Uint8List bytes,
+    String fileName,
+  ) async {
+    if (_client == null) return null;
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'jpg';
     if (ext.length > 4) return null;
     final path = '$productId/${_uuid.v4()}.$ext';
     try {
